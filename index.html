@@ -2,32 +2,38 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>MagicBank Academy · Aula</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MagicBank Academy · Aula</title>
 
   <style>
+    * {
+      box-sizing: border-box;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
     body {
       margin: 0;
-      font-family: Arial, sans-serif;
-      background: #f4f6fa;
+      background: #f4f6f8;
+      height: 100vh;
       display: flex;
       flex-direction: column;
-      height: 100vh;
     }
 
     header {
-      background: #0a1f44;
-      color: #c9a14a;
-      padding: 16px;
+      background: #0b2a4a;
+      color: #d4af37;
+      padding: 12px;
       text-align: center;
       font-weight: bold;
+      font-size: 18px;
+      flex-shrink: 0;
     }
 
     #chat {
       flex: 1;
-      padding: 16px;
       overflow-y: auto;
-      background: #ffffff;
+      padding: 12px;
+      background: white;
     }
 
     .msg {
@@ -35,97 +41,151 @@
     }
 
     .user {
-      color: #0a1f44;
       font-weight: bold;
+      color: #0b2a4a;
     }
 
-    .tutor {
-      color: #333;
+    .bot {
+      font-weight: bold;
+      color: #444;
     }
 
     footer {
       display: flex;
+      gap: 6px;
       padding: 10px;
-      border-top: 1px solid #ccc;
-      background: #fff;
+      border-top: 1px solid #ddd;
+      background: #fafafa;
+      flex-shrink: 0;
     }
 
-    textarea {
+    input {
       flex: 1;
-      resize: none;
-      padding: 8px;
-      font-size: 14px;
+      padding: 10px;
+      font-size: 16px;
     }
 
     button {
-      margin-left: 8px;
       padding: 10px 14px;
-      font-weight: bold;
-      background: #c9a14a;
-      border: none;
+      font-size: 16px;
       cursor: pointer;
+      border: none;
+    }
+
+    #sendBtn {
+      background: #d4af37;
+      color: black;
+    }
+
+    #micBtn {
+      background: #0b2a4a;
+      color: white;
+      border-radius: 50%;
+      width: 44px;
+      height: 44px;
+      font-size: 20px;
+      transition: background 0.3s, transform 0.2s;
+    }
+
+    #micBtn.listening {
+      background: #c62828;
+      transform: scale(1.1);
     }
   </style>
 </head>
 
 <body>
 
-<header>
-  MagicBank Academy · Aula
-</header>
+  <header>
+    MagicBank Academy · Aula
+  </header>
 
-<div id="chat"></div>
+  <div id="chat"></div>
 
-<footer>
-  <textarea id="input" rows="2" placeholder="Escribe al tutor..."></textarea>
-  <button id="send">Enviar</button>
-</footer>
+  <footer>
+    <input id="text" placeholder="Escribe al tutor…" />
+    <button id="micBtn" onclick="startVoice()">🎤</button>
+    <button id="sendBtn" onclick="send()">Enviar</button>
+  </footer>
 
-<script>
-  const chat = document.getElementById("chat");
-  const input = document.getElementById("input");
-  const sendBtn = document.getElementById("send");
+  <script>
+    const chat = document.getElementById("chat");
+    const input = document.getElementById("text");
+    const micBtn = document.getElementById("micBtn");
 
-  const BACKEND_URL =
-    "https://magic-bank-backend-production-713e.up.railway.app/api/magicbank/aula/texto";
-
-  function addMessage(text, cls) {
-    const div = document.createElement("div");
-    div.className = "msg " + cls;
-    div.textContent = text;
-    chat.appendChild(div);
-    chat.scrollTop = chat.scrollHeight;
-  }
-
-  async function sendMessage(message) {
-    addMessage("Tú: " + message, "user");
-
-    try {
-      const res = await fetch(BACKEND_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          course_id: "cocina",
-          message,
-          profile: { preferred_name: "Gustavo" }
-        })
-      });
-
-      const data = await res.json();
-      addMessage("Tutor: " + (data.text || "Sin respuesta"), "tutor");
-    } catch (e) {
-      addMessage("❌ Error conectando con el backend", "tutor");
-      console.error(e);
+    function addMessage(who, text) {
+      const div = document.createElement("div");
+      div.className = "msg";
+      div.innerHTML = `<span class="${who}">${who === 'user' ? 'Tú' : 'Tutor'}:</span> ${text}`;
+      chat.appendChild(div);
+      chat.scrollTop = chat.scrollHeight;
     }
-  }
 
-  sendBtn.addEventListener("click", () => {
-    const msg = input.value.trim();
-    if (!msg) return;
-    input.value = "";
-    sendMessage(msg);
-  });
-</script>
+    async function send(textFromVoice) {
+      const text = textFromVoice || input.value.trim();
+      if (!text) return;
+
+      addMessage("user", text);
+      input.value = "";
+
+      try {
+        const res = await fetch("https://magic-bank-backend-production-713e.up.railway.app/api/magicbank/aula/texto", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            texto: text,
+            course_id: "magicbank-academy"
+          })
+        });
+
+        const data = await res.json();
+        const reply = data?.respuesta || "Sin respuesta";
+        addMessage("bot", reply);
+        speak(reply);
+
+      } catch (e) {
+        addMessage("bot", "Error de conexión con el tutor");
+      }
+    }
+
+    function startVoice() {
+      const SpeechRecognition =
+        window.SpeechRecognition || window.webkitSpeechRecognition;
+
+      if (!SpeechRecognition) {
+        alert("Micrófono no soportado");
+        return;
+      }
+
+      const rec = new SpeechRecognition();
+      rec.lang = "es-ES";
+      rec.interimResults = false;
+
+      micBtn.classList.add("listening");
+      rec.start();
+
+      rec.onresult = e => {
+        const text = e.results[0][0].transcript;
+        send(text);
+      };
+
+      rec.onend = () => {
+        micBtn.classList.remove("listening");
+      };
+
+      rec.onerror = () => {
+        micBtn.classList.remove("listening");
+        alert("Error con el micrófono");
+      };
+    }
+
+    function speak(text) {
+      if (!window.speechSynthesis) return;
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = "es-ES";
+      speechSynthesis.speak(u);
+    }
+  </script>
 
 </body>
 </html>
