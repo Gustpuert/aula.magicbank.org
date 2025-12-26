@@ -2,35 +2,27 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>MagicBank Academy · Cocina Avanzada</title>
+<title>MagicBank Aula</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
-* { box-sizing: border-box; }
-
-html, body {
-  height: 100%;
+body {
   margin: 0;
   font-family: Arial, sans-serif;
   background: #0a1f44;
-}
-
-body {
   display: flex;
   flex-direction: column;
+  height: 100vh;
 }
 
-/* HEADER */
 header {
   background: #0a1f44;
   color: #c9a14a;
   text-align: center;
-  padding: 12px;
+  padding: 14px;
   font-weight: bold;
-  flex-shrink: 0;
 }
 
-/* CHAT */
 #chat {
   flex: 1;
   background: #f4f6fa;
@@ -38,20 +30,16 @@ header {
   overflow-y: auto;
 }
 
-/* MENSAJES */
-.msg { margin-bottom: 12px; line-height: 1.5; }
+.msg { margin-bottom: 12px; }
 .user { color: #0a1f44; font-weight: bold; }
 .tutor { color: #222; }
 
-/* FOOTER */
 footer {
   display: flex;
-  align-items: center;
   gap: 8px;
   padding: 10px;
-  background: #ffffff;
+  background: #fff;
   border-top: 1px solid #ccc;
-  flex-shrink: 0;
 }
 
 textarea {
@@ -59,9 +47,6 @@ textarea {
   resize: none;
   padding: 10px;
   border-radius: 8px;
-  border: 1px solid #ccc;
-  font-size: 14px;
-  height: 44px;
 }
 
 button {
@@ -72,116 +57,65 @@ button {
   cursor: pointer;
 }
 
-#send {
-  background: #c9a14a;
-  color: #0a1f44;
-}
-
-/* ===== AVATAR ORBE ===== */
-#avatar {
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  background: radial-gradient(circle, #1b3b6f, #0a1f44);
-  box-shadow: 0 0 6px rgba(201,161,74,0.3);
-  transition: box-shadow 0.3s ease;
-}
-
-#avatar.hablando {
-  box-shadow:
-    0 0 10px rgba(201,161,74,0.8),
-    0 0 20px rgba(201,161,74,0.6),
-    0 0 30px rgba(201,161,74,0.4);
-}
+#send { background: #c9a14a; color: #0a1f44; }
 </style>
 </head>
 
 <body>
 
-<header>MagicBank Academy · Cocina Avanzada</header>
+<header>MagicBank Aula</header>
 
 <div id="chat"></div>
 
 <footer>
-  <div id="avatar"></div>
-  <textarea id="input" placeholder="Escribe o habla con el tutor..."></textarea>
+  <textarea id="input" placeholder="Escribe aquí..."></textarea>
   <button id="send">Enviar</button>
 </footer>
 
 <script>
+/* =========================
+   VERIFICACIÓN DE ACCESO
+========================= */
+
+const permiso = sessionStorage.getItem("magicbank_acceso");
+
+if (!permiso) {
+  window.location.href = "https://login.magicbank.org";
+}
+
+/* =========================
+   CONFIG
+========================= */
+
+const BACKEND =
+  "https://magic-bank-backend-production-713e.up.railway.app/api/magicbank/aula/texto";
+
 const chat = document.getElementById("chat");
 const input = document.getElementById("input");
 const sendBtn = document.getElementById("send");
-const avatar = document.getElementById("avatar");
 
-/* BACKEND REAL */
-const BACKEND_URL =
-  "https://magic-bank-backend-production-713e.up.railway.app/api/magicbank/aula/texto";
-
-/* MENSAJES */
-function addMessage(text, cls) {
-  const div = document.createElement("div");
-  div.className = "msg " + cls;
-  div.textContent = text;
-  chat.appendChild(div);
+function add(text, cls) {
+  const d = document.createElement("div");
+  d.className = "msg " + cls;
+  d.textContent = text;
+  chat.appendChild(d);
   chat.scrollTop = chat.scrollHeight;
 }
 
-/* ===== VOZ NATURAL ===== */
-let voces = [];
-
-function cargarVoces() {
-  voces = speechSynthesis.getVoices();
-}
-speechSynthesis.onvoiceschanged = cargarVoces;
-cargarVoces();
-
-function hablar(texto) {
-  if (!window.speechSynthesis) return;
-
-  const u = new SpeechSynthesisUtterance(texto);
-
-  const vozHumana = voces.find(v =>
-    v.lang.startsWith("es") &&
-    !v.name.toLowerCase().includes("robot")
-  );
-
-  if (vozHumana) u.voice = vozHumana;
-
-  u.rate = 0.95;
-  u.pitch = 1.0;
-
-  u.onstart = () => avatar.classList.add("hablando");
-  u.onend = () => avatar.classList.remove("hablando");
-
-  speechSynthesis.cancel();
-  speechSynthesis.speak(u);
-}
-
-/* ENVÍO */
 async function sendMessage(msg) {
-  addMessage("Tú: " + msg, "user");
+  add("Tú: " + msg, "user");
 
-  try {
-    const res = await fetch(BACKEND_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        message: msg,
-        course_id: "cocina_avanzada",
-        profile: { preferred_name: "Gustavo" }
-      })
-    });
+  const res = await fetch(BACKEND, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-magicbank-acceso": permiso
+    },
+    body: JSON.stringify({ message: msg })
+  });
 
-    const data = await res.json();
-    const textoTutor = data.text || data.response || "Sin respuesta";
-
-    addMessage("Tutor: " + textoTutor, "tutor");
-    hablar(textoTutor);
-
-  } catch {
-    addMessage("Error de conexión con el tutor.", "tutor");
-  }
+  const data = await res.json();
+  add("Tutor: " + (data.text || "Sin respuesta"), "tutor");
 }
 
 sendBtn.onclick = () => {
