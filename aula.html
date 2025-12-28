@@ -6,7 +6,45 @@
 </head>
 
 <body style="background:#070C2A;color:white;font-family:Arial;padding:40px;">
-  <h1>Bienvenido al Aula MagicBank</h1>
-  <p>Acceso validado correctamente.</p>
+  <h1>MagicBank Aula</h1>
+  <p id="status">Validando sesión...</p>
+
+<script>
+(async function () {
+
+  const token = localStorage.getItem("magicbank_token");
+
+  if (!token) {
+    window.location.href = "https://magicbank.org";
+    return;
+  }
+
+  try {
+    const res = await fetch(
+      "https://magic-bank-backend-production-713e.up.railway.app/api/auth/validate",
+      {
+        headers: {
+          "Authorization": "Bearer " + token
+        }
+      }
+    );
+
+    if (!res.ok) throw new Error("No autorizado");
+
+    const data = await res.json();
+
+    document.getElementById("status").innerText =
+      "Acceso válido. Curso: " + (data.user.course || "General");
+
+    // Aquí luego cargamos tutor / curso real
+
+  } catch (err) {
+    localStorage.removeItem("magicbank_token");
+    window.location.href = "https://magicbank.org";
+  }
+
+})();
+</script>
+
 </body>
 </html>
