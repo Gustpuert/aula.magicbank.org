@@ -2,205 +2,120 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>MagicBank Academy · Aula</title>
+  <title>MagicBank Aula</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <style>
-    :root {
-      --azul-profundo: #070C2A;
-      --azul-secundario: #0E163F;
-      --blanco: #FFFFFF;
-      --gris: #CFCFD6;
-      --dorado: #D6B15A;
-    }
-
-    * {
-      box-sizing: border-box;
+    body {
+      font-family: Arial, sans-serif;
+      background: #070C2A;
+      color: #fff;
       margin: 0;
       padding: 0;
-    }
-
-    body {
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background-color: var(--azul-profundo);
-      color: var(--blanco);
+      display: flex;
+      justify-content: center;
+      align-items: center;
       height: 100vh;
-      display: flex;
-      flex-direction: column;
     }
 
-    header {
-      padding: 14px 20px;
-      background-color: var(--azul-secundario);
-      border-bottom: 1px solid rgba(255,255,255,0.08);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+    .container {
+      text-align: center;
+      max-width: 500px;
+      padding: 30px;
     }
 
-    header h1 {
-      font-size: 16px;
-      font-weight: 600;
-      letter-spacing: 0.5px;
-    }
-
-    header span {
-      font-size: 13px;
-      color: var(--gris);
-    }
-
-    main {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      padding: 16px;
-      overflow: hidden;
-    }
-
-    #contenido {
-      flex: 1;
-      background-color: #0B1236;
-      border-radius: 10px;
-      padding: 18px;
-      overflow-y: auto;
-      line-height: 1.6;
-      font-size: 15px;
-      margin-bottom: 12px;
-    }
-
-    #contenido p {
-      margin-bottom: 12px;
-    }
-
-    .mensaje-alumno {
-      color: var(--gris);
-      font-style: italic;
-      margin-bottom: 10px;
-    }
-
-    .mensaje-tutor {
-      color: var(--blanco);
-    }
-
-    footer {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-    }
-
-    textarea {
-      flex: 1;
-      resize: none;
-      height: 56px;
-      border-radius: 10px;
-      border: none;
-      padding: 14px;
-      font-size: 14px;
-      font-family: inherit;
-    }
-
-    button {
-      padding: 14px 20px;
-      border-radius: 10px;
-      border: none;
-      background-color: var(--dorado);
-      color: #1A1A1A;
-      font-weight: 600;
-      cursor: pointer;
-    }
-
-    /* Avatar / Orbe */
-    #orbe {
-      position: fixed;
-      bottom: 90px;
-      right: 24px;
-      width: 26px;
-      height: 26px;
+    .loader {
+      width: 60px;
+      height: 60px;
+      border: 6px solid rgba(255,255,255,0.2);
+      border-top: 6px solid #D6B15A;
       border-radius: 50%;
-      background: radial-gradient(circle, #D6B15A 0%, #8C6B1F 60%, #3A2B08 100%);
-      opacity: 0.85;
-      pointer-events: none;
-      transition: box-shadow 0.3s ease;
+      animation: spin 1s linear infinite;
+      margin: 30px auto;
     }
 
-    #orbe.hablando {
-      box-shadow: 0 0 18px 6px rgba(214,177,90,0.6);
+    @keyframes spin {
+      to { transform: rotate(360deg); }
     }
   </style>
 </head>
 
 <body>
 
-<header>
-  <h1>MagicBank Academy · Aula</h1>
-  <span>Tutor activo</span>
-</header>
-
-<main>
-  <div id="contenido">
-    <p class="mensaje-tutor">
-      Bienvenido. El Tutor está listo para acompañarte.
-      <br />
-      Formula tu pregunta o continúa con el módulo actual.
-    </p>
-  </div>
-
-  <footer>
-    <textarea id="input" placeholder="Escribe o habla con el tutor..."></textarea>
-    <button onclick="enviar()">Enviar</button>
-  </footer>
-</main>
-
-<div id="orbe"></div>
+<div class="container">
+  <h1>MagicBank Aula</h1>
+  <p id="status">Verificando acceso...</p>
+  <div class="loader"></div>
+</div>
 
 <script>
-  const contenido = document.getElementById("contenido");
-  const input = document.getElementById("input");
-  const orbe = document.getElementById("orbe");
+  (function () {
 
-  async function enviar() {
-    const texto = input.value.trim();
-    if (!texto) return;
-
-    // Mostrar mensaje del alumno
-    const pAlumno = document.createElement("p");
-    pAlumno.className = "mensaje-alumno";
-    pAlumno.textContent = "Tú: " + texto;
-    contenido.appendChild(pAlumno);
-
-    input.value = "";
-    contenido.scrollTop = contenido.scrollHeight;
-
-    // Activar orbe
-    orbe.classList.add("hablando");
-
-    try {
-      const res = await fetch("https://magic-bank-backend-production-713e.up.railway.app/api/aula", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: texto,
-          course_id: "academy",
-          profile: "alumno"
-        })
-      });
-
-      const data = await res.json();
-
-      const pTutor = document.createElement("p");
-      pTutor.className = "mensaje-tutor";
-      pTutor.textContent = data.text || "El tutor no respondió.";
-      contenido.appendChild(pTutor);
-
-      contenido.scrollTop = contenido.scrollHeight;
-    } catch (e) {
-      const pError = document.createElement("p");
-      pError.textContent = "Error de conexión con el tutor.";
-      contenido.appendChild(pError);
-    } finally {
-      orbe.classList.remove("hablando");
+    /**
+     * Obtener token de la URL
+     */
+    function getTokenFromURL() {
+      const params = new URLSearchParams(window.location.search);
+      return params.get("token");
     }
-  }
+
+    /**
+     * Limpiar URL (quitar token visible)
+     */
+    function cleanURL() {
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
+    /**
+     * Guardar sesión
+     */
+    function saveSession(token) {
+      localStorage.setItem("magicbank_token", token);
+    }
+
+    /**
+     * Verificar si ya hay sesión
+     */
+    function hasSession() {
+      return localStorage.getItem("magicbank_token");
+    }
+
+    /**
+     * Flujo principal
+     */
+    const token = getTokenFromURL();
+
+    if (token) {
+      // Caso 1: viene desde pago
+      saveSession(token);
+      cleanURL();
+      document.getElementById("status").innerText =
+        "Acceso confirmado. Cargando tutor...";
+      
+      setTimeout(() => {
+        window.location.href = "/aula.html";
+      }, 1200);
+
+    } else if (hasSession()) {
+      // Caso 2: sesión ya activa
+      document.getElementById("status").innerText =
+        "Sesión activa. Entrando al aula...";
+      
+      setTimeout(() => {
+        window.location.href = "/aula.html";
+      }, 800);
+
+    } else {
+      // Caso 3: acceso no autorizado
+      document.getElementById("status").innerText =
+        "Acceso no autorizado. Redirigiendo...";
+      
+      setTimeout(() => {
+        window.location.href = "https://magicbank.org";
+      }, 1500);
+    }
+
+  })();
 </script>
 
 </body>
