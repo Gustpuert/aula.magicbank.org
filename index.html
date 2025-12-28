@@ -3,119 +3,84 @@
 <head>
   <meta charset="UTF-8" />
   <title>MagicBank Aula</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <style>
     body {
-      font-family: Arial, sans-serif;
       background: #070C2A;
-      color: #fff;
-      margin: 0;
-      padding: 0;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
+      color: white;
+      font-family: Arial, sans-serif;
+      padding: 40px;
     }
-
-    .container {
-      text-align: center;
-      max-width: 500px;
-      padding: 30px;
+    button {
+      padding: 10px 18px;
+      background: #D6B15A;
+      border: none;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 20px;
     }
-
-    .loader {
-      width: 60px;
-      height: 60px;
-      border: 6px solid rgba(255,255,255,0.2);
-      border-top: 6px solid #D6B15A;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      margin: 30px auto;
-    }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
+    #info {
+      margin-top: 20px;
+      color: #CFCFD6;
     }
   </style>
 </head>
 
 <body>
 
-<div class="container">
   <h1>MagicBank Aula</h1>
-  <p id="status">Verificando acceso...</p>
-  <div class="loader"></div>
-</div>
+  <p id="status">Validando sesión...</p>
+  <div id="info"></div>
+
+  <button id="logoutBtn" style="display:none;">Cerrar sesión</button>
 
 <script>
-  (function () {
+(async function () {
 
-    /**
-     * Obtener token de la URL
-     */
-    function getTokenFromURL() {
-      const params = new URLSearchParams(window.location.search);
-      return params.get("token");
-    }
+  const token = localStorage.getItem("magicbank_token");
 
-    /**
-     * Limpiar URL (quitar token visible)
-     */
-    function cleanURL() {
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
+  if (!token) {
+    window.location.href = "https://magicbank.org";
+    return;
+  }
 
-    /**
-     * Guardar sesión
-     */
-    function saveSession(token) {
-      localStorage.setItem("magicbank_token", token);
-    }
+  try {
+    const res = await fetch(
+      "https://magic-bank-backend-production-713e.up.railway.app/api/auth/validate",
+      {
+        headers: {
+          "Authorization": "Bearer " + token
+        }
+      }
+    );
 
-    /**
-     * Verificar si ya hay sesión
-     */
-    function hasSession() {
-      return localStorage.getItem("magicbank_token");
-    }
+    if (!res.ok) throw new Error("Sesión inválida");
 
-    /**
-     * Flujo principal
-     */
-    const token = getTokenFromURL();
+    const data = await res.json();
 
-    if (token) {
-      // Caso 1: viene desde pago
-      saveSession(token);
-      cleanURL();
-      document.getElementById("status").innerText =
-        "Acceso confirmado. Cargando tutor...";
-      
-      setTimeout(() => {
-        window.location.href = "/aula.html";
-      }, 1200);
+    document.getElementById("status").innerText =
+      "Sesión activa";
 
-    } else if (hasSession()) {
-      // Caso 2: sesión ya activa
-      document.getElementById("status").innerText =
-        "Sesión activa. Entrando al aula...";
-      
-      setTimeout(() => {
-        window.location.href = "/aula.html";
-      }, 800);
+    document.getElementById("info").innerText =
+      "Curso: " + (data.user.course || "General") +
+      " · Expira en " + data.expires_in + " segundos";
 
-    } else {
-      // Caso 3: acceso no autorizado
-      document.getElementById("status").innerText =
-        "Acceso no autorizado. Redirigiendo...";
-      
-      setTimeout(() => {
-        window.location.href = "https://magicbank.org";
-      }, 1500);
-    }
+    document.getElementById("logoutBtn").style.display = "inline-block";
 
-  })();
+  } catch (err) {
+    localStorage.removeItem("magicbank_token");
+    window.location.href = "https://magicbank.org";
+  }
+
+})();
+
+/* LOGOUT */
+document.getElementById("logoutBtn").onclick = () => {
+  localStorage.removeItem("magicbank_token");
+  window.location.href = "https://magicbank.org";
+};
 </script>
 
 </body>
